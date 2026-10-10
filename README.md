@@ -13,9 +13,10 @@ The complete installation guide is available on the [Zigtools website](https://z
 
 ### Build From Source
 
-> [!WARNING]
-> ZLS currently lacks critical build system integration with Zig nightly/master. See [#3208](https://github.com/zigtools/zls/issues/3208) for more information.
-> It is recommended to use Zig and ZLS 0.16.0 in the meantime.
+This fork supports stock Zig **0.17.0**, including build-system module resolution,
+generated modules, `zls.build.json` build options, and build-on-save diagnostics.
+The integration is based on upstream's `techatrix/build-runner-process` work
+([#3208](https://github.com/zigtools/zls/issues/3208)); no compiler fork is required.
 
 The default branch of ZLS targets [Zig master](https://ziglang.org/download/).
 
@@ -25,7 +26,45 @@ cd zls
 zig build -Doptimize=ReleaseSafe
 ```
 
-When upgrading Zig, make sure to update ZLS too keep them in sync.
+When upgrading Zig, make sure to update ZLS to keep them in sync.
+
+To use the local build in Zed, set an absolute path in your settings:
+
+```json
+{
+  "lsp": {
+    "zls": {
+      "binary": {
+        "path": "/Users/braheezy/code/zls/zig-out/bin/zls"
+      }
+    }
+  }
+}
+```
+
+Restart Zed's language server after rebuilding. Build-on-save automatically uses
+`check` when available; `build_on_save_args` can select other steps and pass build
+flags. These builds execute the project's build script and selected steps.
+Build-on-save is driven by editor save notifications, not native filesystem
+watching; external disk changes alone do not trigger it. Saving `build.zig`
+restarts the build session so configuration errors can recover.
+
+### Build-system regression tests
+
+```sh
+zig build test
+python3 tests/build_system.py --zls /absolute/path/to/zig-out/bin/zls --zig /absolute/path/to/zig
+```
+
+The Python harness checks actual LSP module navigation, generated files, local
+package dependencies, project options, compiler diagnostics, build-script error
+recovery, and shutdown during a running build. It requires Python 3.9+ and no
+third-party Python packages. Use `--cache-dir /path/to/zig/global-cache` to reuse
+compiler caches across runs.
+
+The integration is tied to Zig 0.17's build-protocol/configuration format. Stock
+Zig does not report all installation-relative or libc-runtime base paths, so
+modules using those unusual path bases may remain unresolved.
 
 ## Features
 
